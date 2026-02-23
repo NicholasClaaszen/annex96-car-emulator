@@ -33,6 +33,7 @@ class SerialManager:
         self._write_lock = asyncio.Lock()
         self._connected = asyncio.Event()
         self._stop = asyncio.Event()
+        self._last_rx_ts: Optional[float] = None
 
     async def connect_loop(self) -> None:
         while not self._stop.is_set():
@@ -80,6 +81,7 @@ class SerialManager:
         await self._connected.wait()
 
     async def _handle_message(self, raw: str) -> None:
+        self._last_rx_ts = time.time()
         parsed = parse_message(raw)
         await self._state.append_log(raw)
         if parsed.key is None:
@@ -124,6 +126,11 @@ class SerialManager:
 
     async def stop(self) -> None:
         self._stop.set()
+
+    def last_rx_age(self) -> Optional[float]:
+        if self._last_rx_ts is None:
+            return None
+        return time.time() - self._last_rx_ts
 
 
 class WebServer:
@@ -253,6 +260,28 @@ async def configure_controller(serial: SerialManager) -> None:
     await serial.send_command("set_wdt_interval", "5")
 
 
+async def startup_probe(serial: SerialManager) -> None:
+    logging.info("Probing controller (version and initial state)")
+    await serial.send_command("version", "?")
+    await serial.send_command("getstate", "cp")
+    await serial.send_command("getstate", "v-")
+    await serial.send_command("getstate", "v+")
+    await serial.send_command("getstate", "pwm")
+    await serial.send_command("getstate", "set")
+    await serial.send_command("getstate", "pp")
+
+
+async def rx_watchdog(serial: SerialManager, warn_after: float = 5.0) -> None:
+    while True:
+        await asyncio.sleep(warn_after)
+        age = serial.last_rx_age()
+        if age is None or age > warn_after:
+            logging.warning(
+                "No RX from controller for %.1fs. Check UART enable (BCM17), console=serial0 removal, and /dev/serial0 permissions.",
+                age if age is not None else warn_after,
+            )
+
+
 async def auto_charge_session(serial: SerialManager, initial_delay: float = 1.0, to_request_delay: float = 2.0) -> None:
     # EV behavior: connect (state B) then request energy (state C)
     await asyncio.sleep(initial_delay)
@@ -286,12 +315,14 @@ async def main() -> None:
         asyncio.create_task(web_server.broadcast_updates()),
         asyncio.create_task(poll_task(serial)),
         asyncio.create_task(watchdog_keepalive(serial)),
+        asyncio.create_task(rx_watchdog(serial)),
     ]
 
     # Configure after serial is connected
     await serial.wait_connected()
     logging.info("Serial connected, starting controller config and auto-session")
     await configure_controller(serial)
+    await startup_probe(serial)
     asyncio.create_task(auto_charge_session(serial))
 
     try:
