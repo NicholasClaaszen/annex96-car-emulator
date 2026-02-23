@@ -11,17 +11,23 @@
     <header class="hero">
       <div class="hero-title">Annex96 EV Emulator</div>
       <div class="hero-sub">Live Control Pilot telemetry and EV state control.</div>
-      <div id="status" class="status">Connecting…</div>
+      <div class="hero-actions">
+        <div id="status" class="status">Connecting…</div>
+        <button id="themeToggle" class="ghost">Toggle Theme</button>
+      </div>
     </header>
 
     <section class="grid">
       <div class="card">
-        <div class="card-title">Live Status</div>
+        <div class="card-title">Mode 3 Status (IEC 61851-1)</div>
         <div class="kv">
-          <div>CP State</div><div id="cp_state">—</div>
-          <div>CP Voltage +</div><div id="cp_vp">—</div>
-          <div>CP Voltage −</div><div id="cp_vn">—</div>
-          <div>PWM Duty</div><div id="cp_pwm">—</div>
+          <div>CP State Code</div><div id="cp_state">—</div>
+          <div>CP State Label</div><div id="cp_state_label">—</div>
+          <div>CP Voltage + (V)</div><div id="cp_vp">—</div>
+          <div>CP Voltage − (V)</div><div id="cp_vn">—</div>
+          <div>PWM Duty (%)</div><div id="cp_pwm">—</div>
+          <div>Estimated Current (A)</div><div id="cp_amps">—</div>
+          <div>Estimated Power (kW @ <span id="mains_v">230</span>V)</div><div id="cp_kw">—</div>
           <div>CP Set State</div><div id="cp_set">—</div>
           <div>PP State</div><div id="pp_state">—</div>
         </div>
@@ -69,6 +75,11 @@
           <div>Status</div><div id="wdt_status">—</div>
           <div>Last Update</div><div id="last_ts">—</div>
         </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Current & Power (Last 10 min)</div>
+        <canvas id="chart" width="600" height="220"></canvas>
       </div>
 
       <div class="card log">

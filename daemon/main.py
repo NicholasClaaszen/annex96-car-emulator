@@ -25,15 +25,17 @@ class SerialConfig:
 
 
 class SerialManager:
-    def __init__(self, state: StateStore, config: SerialConfig) -> None:
+    def __init__(self, state: StateStore, config: SerialConfig, mains_voltage: float) -> None:
         self._state = state
         self._config = config
+        self._mains_voltage = mains_voltage
         self._reader: Optional[asyncio.StreamReader] = None
         self._writer: Optional[asyncio.StreamWriter] = None
         self._write_lock = asyncio.Lock()
         self._connected = asyncio.Event()
         self._stop = asyncio.Event()
         self._last_rx_ts: Optional[float] = None
+        self._last_tx: Optional[str] = None
 
     async def connect_loop(self) -> None:
         while not self._stop.is_set():
@@ -82,6 +84,10 @@ class SerialManager:
 
     async def _handle_message(self, raw: str) -> None:
         self._last_rx_ts = time.time()
+        if raw == "CMD_ERR":
+            logging.warning("Controller CMD_ERR (last TX: %s)", self._last_tx or "unknown")
+            await self._state.append_log(raw)
+            return
         parsed = parse_message(raw)
         await self._state.append_log(raw)
         if parsed.key is None:
@@ -109,6 +115,19 @@ class SerialManager:
             await self._state.update(cp_voltage_pos=value)
         elif key == "cp_duty":
             await self._state.update(cp_pwm_duty=value)
+            try:
+                duty = float(value)
+            except ValueError:
+                duty = None
+            if duty is not None:
+                if 10.0 <= duty <= 85.0:
+                    amps = duty * 0.6
+                elif 85.0 < duty <= 96.0:
+                    amps = 2.5 * (duty - 64.0)
+                else:
+                    amps = 0.0
+                kw = (amps * self._mains_voltage) / 1000.0
+                await self._state.add_pwm_sample(duty=duty, amps=amps, kw=kw)
         elif key == "cp_set":
             await self._state.update(cp_set_state=value)
         elif key == "pp":
@@ -120,6 +139,7 @@ class SerialManager:
             return
         payload = build_command(command, arg)
         async with self._write_lock:
+            self._last_tx = payload.strip()
             logging.debug("TX: %s", payload.strip())
             self._writer.write(payload.encode())
             await self._writer.drain()
@@ -293,14 +313,19 @@ async def auto_charge_session(serial: SerialManager, initial_delay: float = 1.0,
 async def main() -> None:
     serial_port = os.environ.get("PLC_SERIAL_PORT", "/dev/serial0")
     http_port = int(os.environ.get("PLC_HTTP_PORT", "8081"))
+    mains_voltage = float(os.environ.get("PLC_MAINS_VOLTAGE", "230"))
+    log_file = os.environ.get("PLC_LOG_FILE", "logs/telemetry.log")
+    log_max_bytes = int(os.environ.get("PLC_LOG_MAX_BYTES", "1000000"))
+    log_backup_count = int(os.environ.get("PLC_LOG_BACKUP_COUNT", "3"))
 
-    state = StateStore()
+    state = StateStore(log_file=log_file, log_max_bytes=log_max_bytes, log_backup_count=log_backup_count)
+    await state.update(mains_voltage=mains_voltage)
     gpio = GpioController()
     logging.info("GPIO: enabling UART (BCM17) and toggling reset (BCM18)")
     gpio.set_uart_enabled(True)
     gpio.reset_mcu()
 
-    serial = SerialManager(state, SerialConfig(port=serial_port))
+    serial = SerialManager(state, SerialConfig(port=serial_port), mains_voltage=mains_voltage)
 
     web_server = WebServer(state, serial)
 

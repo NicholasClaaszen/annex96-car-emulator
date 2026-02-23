@@ -28,10 +28,12 @@ class _StubGPIO:
         pass
 
 
+USING_STUB = False
 try:
     import RPi.GPIO as _GPIO  # type: ignore
 except Exception:  # pragma: no cover - non-Pi environments
     _GPIO = _StubGPIO()
+    USING_STUB = True
 
 
 @dataclass(frozen=True)
@@ -49,6 +51,8 @@ class GpioController:
     def initialize(self) -> None:
         if self._initialized:
             return
+        if USING_STUB:
+            logging.warning("RPi.GPIO not available, GPIO operations are no-op")
         self._gpio.setmode(self._gpio.BCM)
         self._gpio.setup(self._pins.uart_enable_bcm, self._gpio.OUT)
         self._gpio.setup(self._pins.reset_bcm, self._gpio.OUT)
