@@ -254,15 +254,17 @@ class WebServer:
         return self._app
 
 
-async def poll_task(serial: SerialManager) -> None:
+async def poll_task(serial: SerialManager, enable_getstate_set: bool, enable_getstate_pp: bool) -> None:
     # Periodic full snapshot polling (1 Hz)
     while True:
         await serial.send_command("getstate", "cp")
         await serial.send_command("getstate", "v-")
         await serial.send_command("getstate", "v+")
         await serial.send_command("getstate", "pwm")
-        await serial.send_command("getstate", "set")
-        await serial.send_command("getstate", "pp")
+        if enable_getstate_set:
+            await serial.send_command("getstate", "set")
+        if enable_getstate_pp:
+            await serial.send_command("getstate", "pp")
         await asyncio.sleep(1.0)
 
 
@@ -272,23 +274,25 @@ async def watchdog_keepalive(serial: SerialManager, interval: float = 2.5) -> No
         await asyncio.sleep(interval)
 
 
-async def configure_controller(serial: SerialManager) -> None:
+async def configure_controller(serial: SerialManager, report_cmd: str) -> None:
     logging.info("Configuring controller report/watchdog settings")
-    await serial.send_command("report_state_changes", "enable")
+    await serial.send_command(report_cmd, "enable")
     await serial.send_command("report_pwm_changes", "enable")
     await serial.send_command("watchdog", "enable")
     await serial.send_command("set_wdt_interval", "5")
 
 
-async def startup_probe(serial: SerialManager) -> None:
+async def startup_probe(serial: SerialManager, enable_getstate_set: bool, enable_getstate_pp: bool) -> None:
     logging.info("Probing controller (version and initial state)")
     await serial.send_command("version", "?")
     await serial.send_command("getstate", "cp")
     await serial.send_command("getstate", "v-")
     await serial.send_command("getstate", "v+")
     await serial.send_command("getstate", "pwm")
-    await serial.send_command("getstate", "set")
-    await serial.send_command("getstate", "pp")
+    if enable_getstate_set:
+        await serial.send_command("getstate", "set")
+    if enable_getstate_pp:
+        await serial.send_command("getstate", "pp")
 
 
 async def rx_watchdog(serial: SerialManager, warn_after: float = 5.0) -> None:
@@ -317,6 +321,9 @@ async def main() -> None:
     log_file = os.environ.get("PLC_LOG_FILE", "logs/telemetry.log")
     log_max_bytes = int(os.environ.get("PLC_LOG_MAX_BYTES", "1000000"))
     log_backup_count = int(os.environ.get("PLC_LOG_BACKUP_COUNT", "3"))
+    report_cmd = os.environ.get("PLC_REPORT_STATE_CMD", "report_state_changes")
+    enable_getstate_set = os.environ.get("PLC_ENABLE_GETSTATE_SET", "1") == "1"
+    enable_getstate_pp = os.environ.get("PLC_ENABLE_GETSTATE_PP", "1") == "1"
 
     state = StateStore(log_file=log_file, log_max_bytes=log_max_bytes, log_backup_count=log_backup_count)
     await state.update(mains_voltage=mains_voltage)
@@ -338,7 +345,7 @@ async def main() -> None:
     tasks = [
         asyncio.create_task(serial.connect_loop()),
         asyncio.create_task(web_server.broadcast_updates()),
-        asyncio.create_task(poll_task(serial)),
+        asyncio.create_task(poll_task(serial, enable_getstate_set, enable_getstate_pp)),
         asyncio.create_task(watchdog_keepalive(serial)),
         asyncio.create_task(rx_watchdog(serial)),
     ]
@@ -346,8 +353,8 @@ async def main() -> None:
     # Configure after serial is connected
     await serial.wait_connected()
     logging.info("Serial connected, starting controller config and auto-session")
-    await configure_controller(serial)
-    await startup_probe(serial)
+    await configure_controller(serial, report_cmd=report_cmd)
+    await startup_probe(serial, enable_getstate_set, enable_getstate_pp)
     asyncio.create_task(auto_charge_session(serial))
 
     try:

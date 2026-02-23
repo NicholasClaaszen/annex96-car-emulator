@@ -23,6 +23,8 @@ class TelemetryState:
     raw_log_tail: List[str] = field(default_factory=list)
     pwm_history: List[Dict[str, float]] = field(default_factory=list)
     mains_voltage: float | None = None
+    energy_kwh: float = 0.0
+    _last_pwm_ts: float | None = None
 
     def to_dict(self) -> Dict[str, object]:
         return {
@@ -37,6 +39,7 @@ class TelemetryState:
             "raw_log_tail": list(self.raw_log_tail),
             "pwm_history": list(self.pwm_history),
             "mains_voltage": self.mains_voltage,
+            "energy_kwh": self.energy_kwh,
         }
 
 
@@ -93,8 +96,19 @@ class StateStore:
 
     async def add_pwm_sample(self, duty: float, amps: float, kw: float) -> None:
         async with self._lock:
+            now = time.time()
+            if self._state._last_pwm_ts is not None:
+                dt_hours = (now - self._state._last_pwm_ts) / 3600.0
+                self._state.energy_kwh += kw * dt_hours
+            self._state._last_pwm_ts = now
             self._state.pwm_history.append(
-                {"ts": time.time(), "duty": duty, "amps": amps, "kw": kw}
+                {
+                    "ts": now,
+                    "duty": duty,
+                    "amps": amps,
+                    "kw": kw,
+                    "kwh": self._state.energy_kwh,
+                }
             )
             if len(self._state.pwm_history) > self._pwm_history_max:
                 self._state.pwm_history = self._state.pwm_history[-self._pwm_history_max :]

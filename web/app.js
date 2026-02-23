@@ -17,8 +17,12 @@ const fields = {
 
 let ws;
 let reconnectTimer;
-const chart = document.getElementById('chart');
-const ctx = chart.getContext('2d');
+const chartPwm = document.getElementById('chart_pwm');
+const chartAmps = document.getElementById('chart_amps');
+const chartKwh = document.getElementById('chart_kwh');
+const ctxPwm = chartPwm.getContext('2d');
+const ctxAmps = chartAmps.getContext('2d');
+const ctxKwh = chartKwh.getContext('2d');
 const themeToggle = document.getElementById('themeToggle');
 
 const mode3Labels = {
@@ -70,7 +74,7 @@ function applyState(data) {
     fields.log.textContent = data.raw_log_tail.join('\n');
   }
   if (Array.isArray(data.pwm_history)) {
-    renderChart(data.pwm_history);
+    renderCharts(data.pwm_history);
   }
 }
 
@@ -109,46 +113,46 @@ for (const btn of document.querySelectorAll('button[data-action]')) {
   });
 }
 
-function renderChart(series) {
+function renderCharts(series) {
   const maxPoints = 600;
   const data = series.slice(-maxPoints);
-  ctx.clearRect(0, 0, chart.width, chart.height);
+  const pwm = data.map(p => p.duty);
+  const amps = data.map(p => p.amps);
+  const kwh = data.map(p => p.kwh);
+
+  drawSingleChart(chartPwm, ctxPwm, pwm, 100, 'PWM Duty (%)', '#4aa3a2');
+  drawSingleChart(chartAmps, ctxAmps, amps, 35, 'Current (A) [max 35A]', '#e2c044');
+  const kwhMax = Math.max(0.5, ...kwh);
+  drawSingleChart(chartKwh, ctxKwh, kwh, kwhMax, 'Energy (kWh)', '#7c8cff');
+}
+
+function drawSingleChart(canvas, ctx, values, maxY, label, color) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--panel');
-  ctx.fillRect(0, 0, chart.width, chart.height);
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  const padding = 30;
-  const w = chart.width - padding * 2;
-  const h = chart.height - padding * 2;
-
-  const ampsMax = Math.max(6, ...data.map(p => p.amps));
-  const kwMax = Math.max(1, ...data.map(p => p.kw));
+  const padding = 32;
+  const w = canvas.width - padding * 2;
+  const h = canvas.height - padding * 2;
 
   ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--border');
   ctx.lineWidth = 1;
   ctx.strokeRect(padding, padding, w, h);
 
-  const drawLine = (values, color) => {
-    ctx.beginPath();
-    values.forEach((v, i) => {
-      const x = padding + (i / (values.length - 1 || 1)) * w;
-      const y = padding + h - (v / (values === amps ? ampsMax : kwMax)) * h;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  };
-
-  const amps = data.map(p => p.amps);
-  const kws = data.map(p => p.kw);
-  drawLine(amps, '#4aa3a2');
-  drawLine(kws, '#e2c044');
+  ctx.beginPath();
+  values.forEach((v, i) => {
+    const x = padding + (i / (values.length - 1 || 1)) * w;
+    const y = padding + h - (v / maxY) * h;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
 
   ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted');
   ctx.font = '12px sans-serif';
-  ctx.fillText(`Amps (max ${ampsMax.toFixed(1)})`, padding + 6, padding + 14);
-  ctx.fillText(`kW (max ${kwMax.toFixed(1)})`, padding + 140, padding + 14);
+  ctx.fillText(label, padding + 6, padding + 14);
 }
 
 function setTheme(theme) {
