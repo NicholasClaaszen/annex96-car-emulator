@@ -102,6 +102,30 @@ body {
   min-height: 160px;
 }
 
+.card-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: inherit;
+}
+
+.card-toggle .chevron {
+  transition: transform 0.2s ease;
+}
+
+.collapsible.collapsed .card-body {
+  display: none;
+}
+
+.collapsible.collapsed .chevron {
+  transform: rotate(-90deg);
+}
+
 .card-title {
   font-weight: 600;
   margin-bottom: 12px;
@@ -175,11 +199,16 @@ pre {
 
 .card.chart {
   grid-column: 1 / -1;
+  padding: 18px 18px 24px;
+}
+
+.card.chart .card-body {
+  height: 320px;
 }
 
 .card canvas {
   width: 100%;
-  height: 260px;
+  height: 100%;
   border-radius: 10px;
   border: 1px solid var(--border);
 }

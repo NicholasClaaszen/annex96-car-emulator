@@ -18,10 +18,10 @@ let ws;
 let reconnectTimer;
 const chartPwm = document.getElementById('chart_pwm');
 const chartAmps = document.getElementById('chart_amps');
-const chartKwh = document.getElementById('chart_kwh');
-const ctxPwm = chartPwm.getContext('2d');
-const ctxAmps = chartAmps.getContext('2d');
-const ctxKwh = chartKwh.getContext('2d');
+const chartKw = document.getElementById('chart_kw');
+let pwmChart;
+let ampsChart;
+let kwChart;
 const themeToggle = document.getElementById('themeToggle');
 
 const mode3Labels = {
@@ -111,51 +111,83 @@ for (const btn of document.querySelectorAll('button[data-action]')) {
   });
 }
 
-function renderCharts(series) {
-  const maxPoints = 600;
-  const data = series.slice(-maxPoints);
-  const pwm = data.map(p => p.duty);
-  const amps = data.map(p => p.amps);
-  const kwh = data.map(p => p.kwh);
+function ensureCharts() {
+  if (pwmChart && ampsChart && kwChart) return;
+  const gridColor = getComputedStyle(document.body).getPropertyValue('--border').trim();
+  const textColor = getComputedStyle(document.body).getPropertyValue('--muted').trim();
 
-  drawSingleChart(chartPwm, ctxPwm, pwm, 100, 'PWM Duty (%)', '#4aa3a2');
-  drawSingleChart(chartAmps, ctxAmps, amps, 35, 'Current (A) [max 35A]', '#e2c044');
-  const kwhMax = Math.max(0.5, ...kwh);
-  drawSingleChart(chartKwh, ctxKwh, kwh, kwhMax, 'Energy (kWh)', '#7c8cff');
+  const commonOptions = (yTitle, yMax) => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { mode: 'index', intersect: false },
+    },
+    scales: {
+      x: {
+        type: 'time',
+        time: { unit: 'minute' },
+        grid: { color: gridColor },
+        ticks: { color: textColor },
+        title: { display: true, text: 'Time', color: textColor },
+      },
+      y: {
+        min: 0,
+        max: yMax,
+        grid: { color: gridColor },
+        ticks: { color: textColor },
+        title: { display: true, text: yTitle, color: textColor },
+      },
+    },
+  });
+
+  pwmChart = new Chart(chartPwm, {
+    type: 'line',
+    data: { datasets: [{ label: 'PWM Duty %', data: [], borderColor: '#4aa3a2', tension: 0.25 }] },
+    options: commonOptions('PWM Duty (%)', 100),
+  });
+
+  ampsChart = new Chart(chartAmps, {
+    type: 'line',
+    data: { datasets: [{ label: 'Current (A)', data: [], borderColor: '#e2c044', tension: 0.25 }] },
+    options: commonOptions('Current (A)', 35),
+  });
+
+  kwChart = new Chart(chartKw, {
+    type: 'line',
+    data: { datasets: [{ label: 'Power (kW)', data: [], borderColor: '#7c8cff', tension: 0.25 }] },
+    options: commonOptions('Power (kW)', 10),
+  });
 }
 
-function drawSingleChart(canvas, ctx, values, maxY, label, color) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--panel');
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+function renderCharts(series) {
+  ensureCharts();
+  const maxPoints = 600;
+  const data = series.slice(-maxPoints);
+  const pwm = data.map(p => ({ x: p.ts * 1000, y: p.duty }));
+  const amps = data.map(p => ({ x: p.ts * 1000, y: p.amps }));
+  const kw = data.map(p => ({ x: p.ts * 1000, y: p.kw }));
 
-  const padding = 32;
-  const w = canvas.width - padding * 2;
-  const h = canvas.height - padding * 2;
-
-  ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--border');
-  ctx.lineWidth = 1;
-  ctx.strokeRect(padding, padding, w, h);
-
-  ctx.beginPath();
-  values.forEach((v, i) => {
-    const x = padding + (i / (values.length - 1 || 1)) * w;
-    const y = padding + h - (v / maxY) * h;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2.5;
-  ctx.stroke();
-
-  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted');
-  ctx.font = '12px sans-serif';
-  ctx.fillText(label, padding + 6, padding + 14);
+  pwmChart.data.datasets[0].data = pwm;
+  ampsChart.data.datasets[0].data = amps;
+  kwChart.data.datasets[0].data = kw;
+  pwmChart.update('none');
+  ampsChart.update('none');
+  kwChart.update('none');
 }
 
 function setTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   localStorage.setItem('theme', theme);
+  if (pwmChart && ampsChart && kwChart) {
+    pwmChart.destroy();
+    ampsChart.destroy();
+    kwChart.destroy();
+    pwmChart = null;
+    ampsChart = null;
+    kwChart = null;
+    ensureCharts();
+  }
 }
 
 themeToggle.addEventListener('click', () => {
@@ -164,5 +196,23 @@ themeToggle.addEventListener('click', () => {
 });
 
 setTheme(localStorage.getItem('theme') || 'dark');
+
+const collapseState = JSON.parse(localStorage.getItem('collapseState') || '{}');
+for (const card of document.querySelectorAll('.collapsible')) {
+  const key = card.dataset.section;
+  const isOpen = collapseState[key] !== false;
+  card.classList.toggle('collapsed', !isOpen);
+}
+
+for (const toggle of document.querySelectorAll('.card-toggle')) {
+  toggle.addEventListener('click', () => {
+    const card = toggle.closest('.collapsible');
+    const key = card.dataset.section;
+    const nowCollapsed = !card.classList.contains('collapsed');
+    card.classList.toggle('collapsed', nowCollapsed);
+    collapseState[key] = !nowCollapsed;
+    localStorage.setItem('collapseState', JSON.stringify(collapseState));
+  });
+}
 
 connect();

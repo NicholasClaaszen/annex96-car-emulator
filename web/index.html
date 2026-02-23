@@ -18,79 +18,117 @@
     </header>
 
     <section class="grid">
-      <div class="card">
-        <div class="card-title">Mode 3 Status (IEC 61851-1)</div>
-        <div class="kv">
-          <div>CP State Code</div><div id="cp_state">—</div>
-          <div>CP State Label</div><div id="cp_state_label">—</div>
-          <div>CP Voltage + (V)</div><div id="cp_vp">—</div>
-          <div>CP Voltage − (V)</div><div id="cp_vn">—</div>
-          <div>PWM Duty (%)</div><div id="cp_pwm">—</div>
-          <div>Estimated Current (A)</div><div id="cp_amps">—</div>
-          <div>Estimated Power (kW @ <span id="mains_v">230</span>V)</div><div id="cp_kw">—</div>
-          <div>CP Set State</div><div id="cp_set">—</div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Controls</div>
-        <div class="controls">
-          <div class="control-group">
-            <div class="label">Set CP State</div>
-            <div class="button-row">
-              <button data-action="setstate" data-value="A">State A</button>
-              <button data-action="setstate" data-value="B">State B</button>
-              <button data-action="setstate" data-value="C">State C</button>
-            </div>
-          </div>
-          <div class="control-group">
-            <div class="label">Charging Session</div>
-            <div class="button-row">
-              <button data-action="control" data-value="pause">Pause</button>
-              <button data-action="control" data-value="resume">Resume</button>
-              <button data-action="control" data-value="full">Full</button>
-              <button data-action="control" data-value="stop">Stop</button>
-            </div>
-          </div>
-          <div class="control-group">
-            <div class="label">Snapshot</div>
-            <div class="button-row">
-              <button data-action="getstate" data-value="now">Refresh Now</button>
-            </div>
+      <div class="card collapsible" data-section="status">
+        <button class="card-toggle" data-toggle="status">
+          <span class="card-title">Mode 3 Status (IEC 61851-1)</span>
+          <span class="chevron">▾</span>
+        </button>
+        <div class="card-body">
+          <div class="kv">
+            <div>CP State Code</div><div id="cp_state">—</div>
+            <div>CP State Label</div><div id="cp_state_label">—</div>
+            <div>CP Voltage + (V)</div><div id="cp_vp">—</div>
+            <div>CP Voltage − (V)</div><div id="cp_vn">—</div>
+            <div>PWM Duty (%)</div><div id="cp_pwm">—</div>
+            <div>Estimated Current (A)</div><div id="cp_amps">—</div>
+            <div>Estimated Power (kW @ <span id="mains_v">230</span>V)</div><div id="cp_kw">—</div>
+            <div>CP Set State</div><div id="cp_set">—</div>
           </div>
         </div>
       </div>
 
-      <div class="card">
-        <div class="card-title">Watchdog</div>
-        <div class="kv">
-          <div>Status</div><div id="wdt_status">—</div>
-          <div>Last Update</div><div id="last_ts">—</div>
+      <div class="card collapsible" data-section="controls">
+        <button class="card-toggle" data-toggle="controls">
+          <span class="card-title">Controls</span>
+          <span class="chevron">▾</span>
+        </button>
+        <div class="card-body">
+          <div class="controls">
+            <div class="control-group">
+              <div class="label">Set CP State</div>
+              <div class="button-row">
+                <button data-action="setstate" data-value="A">State A</button>
+                <button data-action="setstate" data-value="B">State B</button>
+                <button data-action="setstate" data-value="C">State C</button>
+              </div>
+            </div>
+            <div class="control-group">
+              <div class="label">Charging Session</div>
+              <div class="button-row">
+                <button data-action="control" data-value="pause">Pause</button>
+                <button data-action="control" data-value="resume">Resume</button>
+                <button data-action="control" data-value="full">Full</button>
+                <button data-action="control" data-value="stop">Stop</button>
+              </div>
+            </div>
+            <div class="control-group">
+              <div class="label">Snapshot</div>
+              <div class="button-row">
+                <button data-action="getstate" data-value="now">Refresh Now</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="card chart">
-        <div class="card-title">PWM Duty vs Time</div>
-        <canvas id="chart_pwm" width="800" height="240"></canvas>
+      <div class="card collapsible" data-section="watchdog">
+        <button class="card-toggle" data-toggle="watchdog">
+          <span class="card-title">Watchdog</span>
+          <span class="chevron">▾</span>
+        </button>
+        <div class="card-body">
+          <div class="kv">
+            <div>Status</div><div id="wdt_status">—</div>
+            <div>Last Update</div><div id="last_ts">—</div>
+          </div>
+        </div>
       </div>
 
-      <div class="card chart">
-        <div class="card-title">Current (A) vs Time</div>
-        <canvas id="chart_amps" width="800" height="240"></canvas>
+      <div class="card chart collapsible" data-section="chart_pwm">
+        <button class="card-toggle" data-toggle="chart_pwm">
+          <span class="card-title">PWM Duty vs Time</span>
+          <span class="chevron">▾</span>
+        </button>
+        <div class="card-body">
+          <canvas id="chart_pwm" height="260"></canvas>
+        </div>
       </div>
 
-      <div class="card chart">
-        <div class="card-title">Energy (kWh) vs Time</div>
-        <canvas id="chart_kwh" width="800" height="240"></canvas>
+      <div class="card chart collapsible" data-section="chart_amps">
+        <button class="card-toggle" data-toggle="chart_amps">
+          <span class="card-title">Current (A) vs Time</span>
+          <span class="chevron">▾</span>
+        </button>
+        <div class="card-body">
+          <canvas id="chart_amps" height="260"></canvas>
+        </div>
       </div>
 
-      <div class="card log">
-        <div class="card-title">Raw Log Tail</div>
-        <pre id="log"></pre>
+      <div class="card chart collapsible" data-section="chart_kw">
+        <button class="card-toggle" data-toggle="chart_kw">
+          <span class="card-title">Power (kW) vs Time</span>
+          <span class="chevron">▾</span>
+        </button>
+        <div class="card-body">
+          <canvas id="chart_kw" height="260"></canvas>
+        </div>
+      </div>
+
+      <div class="card log collapsible" data-section="log">
+        <button class="card-toggle" data-toggle="log">
+          <span class="card-title">Raw Log Tail</span>
+          <span class="chevron">▾</span>
+        </button>
+        <div class="card-body">
+          <pre id="log"></pre>
+        </div>
       </div>
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.3.1/dist/chartjs-adapter-luxon.umd.min.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>
