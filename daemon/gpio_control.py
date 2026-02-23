@@ -5,6 +5,7 @@ Uses RPi.GPIO when available, otherwise falls back to a no-op stub.
 from __future__ import annotations
 
 import time
+import logging
 from dataclasses import dataclass
 
 
@@ -51,15 +52,18 @@ class GpioController:
         self._gpio.setmode(self._gpio.BCM)
         self._gpio.setup(self._pins.uart_enable_bcm, self._gpio.OUT)
         self._gpio.setup(self._pins.reset_bcm, self._gpio.OUT)
+        logging.info("GPIO initialized (BCM17 UART enable, BCM18 reset)")
         self._initialized = True
 
     def set_uart_enabled(self, enabled: bool) -> None:
         self.initialize()
+        logging.info("GPIO UART enable set to %s", "HIGH" if enabled else "LOW")
         self._gpio.output(self._pins.uart_enable_bcm, self._gpio.HIGH if enabled else self._gpio.LOW)
 
     def reset_mcu(self, hold_ms: int = 150) -> None:
         self.initialize()
         # HIGH holds reset, then release LOW
+        logging.info("GPIO MCU reset pulse HIGH for %d ms then LOW", hold_ms)
         self._gpio.output(self._pins.reset_bcm, self._gpio.HIGH)
         time.sleep(hold_ms / 1000.0)
         self._gpio.output(self._pins.reset_bcm, self._gpio.LOW)

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import time
 from dataclasses import dataclass
@@ -36,13 +37,16 @@ class SerialManager:
     async def connect_loop(self) -> None:
         while not self._stop.is_set():
             try:
+                logging.info("Opening serial %s @ %d", self._config.port, self._config.baudrate)
                 self._reader, self._writer = await serial_asyncio.open_serial_connection(
                     url=self._config.port, baudrate=self._config.baudrate
                 )
                 self._connected.set()
+                logging.info("Serial connected")
                 await self._state.append_log("serial connected")
                 await self._read_loop()
             except Exception as exc:
+                logging.exception("Serial error: %s", exc)
                 await self._state.append_log(f"serial error: {exc}")
                 self._connected.clear()
                 await asyncio.sleep(2.0)
@@ -69,6 +73,7 @@ class SerialManager:
                 raw, buffer = buffer.split(";", 1)
                 if not raw:
                     continue
+                logging.debug("RX: %s", raw)
                 await self._handle_message(raw)
 
     async def wait_connected(self) -> None:
@@ -113,6 +118,7 @@ class SerialManager:
             return
         payload = build_command(command, arg)
         async with self._write_lock:
+            logging.debug("TX: %s", payload.strip())
             self._writer.write(payload.encode())
             await self._writer.drain()
 
@@ -240,6 +246,7 @@ async def watchdog_keepalive(serial: SerialManager, interval: float = 2.5) -> No
 
 
 async def configure_controller(serial: SerialManager) -> None:
+    logging.info("Configuring controller report/watchdog settings")
     await serial.send_command("report_state_changes", "enable")
     await serial.send_command("report_pwm_changes", "enable")
     await serial.send_command("watchdog", "enable")
@@ -260,6 +267,7 @@ async def main() -> None:
 
     state = StateStore()
     gpio = GpioController()
+    logging.info("GPIO: enabling UART (BCM17) and toggling reset (BCM18)")
     gpio.set_uart_enabled(True)
     gpio.reset_mcu()
 
@@ -271,6 +279,7 @@ async def main() -> None:
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", http_port)
     await site.start()
+    logging.info("Web UI listening on port %d", http_port)
 
     tasks = [
         asyncio.create_task(serial.connect_loop()),
@@ -281,6 +290,7 @@ async def main() -> None:
 
     # Configure after serial is connected
     await serial.wait_connected()
+    logging.info("Serial connected, starting controller config and auto-session")
     await configure_controller(serial)
     asyncio.create_task(auto_charge_session(serial))
 
@@ -293,4 +303,8 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=os.environ.get("LOG_LEVEL", "INFO").upper(),
+        format="%(asctime)s %(levelname)s %(message)s",
+    )
     asyncio.run(main())
