@@ -9,7 +9,6 @@ const fields = {
   cp_kw: document.getElementById('cp_kw'),
   mains_v: document.getElementById('mains_v'),
   cp_set: document.getElementById('cp_set'),
-  pp_state: document.getElementById('pp_state'),
   wdt_status: document.getElementById('wdt_status'),
   last_ts: document.getElementById('last_ts'),
   log: document.getElementById('log'),
@@ -67,7 +66,6 @@ function applyState(data) {
     fields.mains_v.textContent = Number(data.mains_voltage).toFixed(0);
   }
   fields.cp_set.textContent = data.cp_set_state ?? '—';
-  fields.pp_state.textContent = data.pp_state ?? '—';
   fields.wdt_status.textContent = data.watchdog_status ?? '—';
   fields.last_ts.textContent = fmtTs(data.last_message_ts);
   if (Array.isArray(data.raw_log_tail)) {
