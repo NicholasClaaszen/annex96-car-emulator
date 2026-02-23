@@ -1,0 +1,83 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Annex96 EV Emulator</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div class="hero-title">Annex96 EV Emulator</div>
+      <div class="hero-sub">Live Control Pilot telemetry and EV state control.</div>
+      <div id="status" class="status">Connecting…</div>
+    </header>
+
+    <section class="grid">
+      <div class="card">
+        <div class="card-title">Live Status</div>
+        <div class="kv">
+          <div>CP State</div><div id="cp_state">—</div>
+          <div>CP Voltage +</div><div id="cp_vp">—</div>
+          <div>CP Voltage −</div><div id="cp_vn">—</div>
+          <div>PWM Duty</div><div id="cp_pwm">—</div>
+          <div>CP Set State</div><div id="cp_set">—</div>
+          <div>PP State</div><div id="pp_state">—</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Controls</div>
+        <div class="controls">
+          <div class="control-group">
+            <div class="label">Set CP State</div>
+            <div class="button-row">
+              <button data-action="setstate" data-value="A">State A</button>
+              <button data-action="setstate" data-value="B">State B</button>
+              <button data-action="setstate" data-value="C">State C</button>
+            </div>
+          </div>
+          <div class="control-group">
+            <div class="label">Charging Session</div>
+            <div class="button-row">
+              <button data-action="control" data-value="pause">Pause</button>
+              <button data-action="control" data-value="resume">Resume</button>
+              <button data-action="control" data-value="full">Full</button>
+              <button data-action="control" data-value="stop">Stop</button>
+            </div>
+          </div>
+          <div class="control-group">
+            <div class="label">PP Resistor</div>
+            <div class="button-row">
+              <button data-action="setpp" data-value="on">PP On</button>
+              <button data-action="setpp" data-value="off">PP Off</button>
+            </div>
+          </div>
+          <div class="control-group">
+            <div class="label">Snapshot</div>
+            <div class="button-row">
+              <button data-action="getstate" data-value="now">Refresh Now</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Watchdog</div>
+        <div class="kv">
+          <div>Status</div><div id="wdt_status">—</div>
+          <div>Last Update</div><div id="last_ts">—</div>
+        </div>
+      </div>
+
+      <div class="card log">
+        <div class="card-title">Raw Log Tail</div>
+        <pre id="log"></pre>
+      </div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
