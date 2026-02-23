@@ -113,7 +113,7 @@ class SerialManager:
             await self._state.update(cp_voltage_neg=value)
         elif key == "cp_v+":
             await self._state.update(cp_voltage_pos=value)
-        elif key == "cp_duty":
+        elif key in {"cp_duty", "cp_pwm"}:
             await self._state.update(cp_pwm_duty=value)
             try:
                 duty = float(value)
