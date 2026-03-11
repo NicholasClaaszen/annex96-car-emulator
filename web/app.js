@@ -23,6 +23,8 @@ let pwmChart;
 let ampsChart;
 let kwChart;
 const themeToggle = document.getElementById('themeToggle');
+const CHART_WINDOW_MS = 10 * 60 * 1000;
+const MAX_CHART_POINTS = 2000;
 
 const mode3Labels = {
   A1: 'A1: EV not connected (+12V DC)',
@@ -162,11 +164,21 @@ function ensureCharts() {
 
 function renderCharts(series) {
   ensureCharts();
-  const maxPoints = 600;
-  const data = series.slice(-maxPoints);
+  const nowMs = Date.now();
+  const windowStartMs = nowMs - CHART_WINDOW_MS;
+  const data = series
+    .slice(-MAX_CHART_POINTS)
+    .filter((p) => (p.ts * 1000) >= windowStartMs);
   const pwm = data.map(p => ({ x: p.ts * 1000, y: p.duty }));
   const amps = data.map(p => ({ x: p.ts * 1000, y: p.amps }));
   const kw = data.map(p => ({ x: p.ts * 1000, y: p.kw }));
+
+  pwmChart.options.scales.x.min = windowStartMs;
+  pwmChart.options.scales.x.max = nowMs;
+  ampsChart.options.scales.x.min = windowStartMs;
+  ampsChart.options.scales.x.max = nowMs;
+  kwChart.options.scales.x.min = windowStartMs;
+  kwChart.options.scales.x.max = nowMs;
 
   pwmChart.data.datasets[0].data = pwm;
   ampsChart.data.datasets[0].data = amps;
