@@ -2,6 +2,8 @@
 
 Python daemon for Raspberry Pi that emulates an EV (car-side) against the Annex96 PLC-HAT controller, with a live web UI.
 
+Current version: `1.0.0`
+
 ## What This Project Does
 
 - Talks to the PLC-HAT microcontroller over UART (`/dev/serial0`, 115200).
@@ -126,3 +128,5 @@ python -m daemon.main
 - `scripts/install_pi.sh`: Pi installer script
 - `scripts/annex96-ev-emulator.service`: example service template
 - `requirements.txt`: Python dependencies
+- `VERSION`: release version marker
+- `CHANGELOG.md`: release notes
