@@ -105,6 +105,9 @@ python -m daemon.main
 
 - Service fails immediately:
   - Check logs: `sudo journalctl -u annex96-ev-emulator.service -n 200 --no-pager`
+- `ModuleNotFoundError: No module named 'pip._vendor.rich'` during install:
+  - Re-run installer after deleting the venv: `rm -rf .venv && sudo bash scripts/install_pi.sh`
+  - The installer now auto-repairs pip and recreates the venv if pip is corrupted.
 - No serial data:
   - Confirm UART enabled and serial console removed.
   - Confirm service user is in `dialout`.

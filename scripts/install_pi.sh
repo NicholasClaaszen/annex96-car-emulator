@@ -98,9 +98,19 @@ echo "[5/7] Creating/updating virtual environment..."
 if [[ ! -d "${VENV_DIR}" ]]; then
   sudo -u "${APP_USER}" python3 -m venv "${VENV_DIR}"
 fi
-sudo -u "${APP_USER}" "${VENV_DIR}/bin/python" -m pip install --upgrade pip setuptools wheel
-sudo -u "${APP_USER}" "${VENV_DIR}/bin/pip" install -r "${REQ_FILE}"
-sudo -u "${APP_USER}" "${VENV_DIR}/bin/pip" install RPi.GPIO
+
+# Repair/seed pip in case the venv pip is broken (e.g. missing pip._vendor modules).
+sudo -u "${APP_USER}" "${VENV_DIR}/bin/python" -m ensurepip --upgrade
+if ! sudo -u "${APP_USER}" "${VENV_DIR}/bin/python" -m pip --version >/dev/null 2>&1; then
+  echo "Detected broken pip in ${VENV_DIR}, recreating virtual environment..."
+  rm -rf "${VENV_DIR}"
+  sudo -u "${APP_USER}" python3 -m venv "${VENV_DIR}"
+  sudo -u "${APP_USER}" "${VENV_DIR}/bin/python" -m ensurepip --upgrade
+fi
+
+sudo -u "${APP_USER}" "${VENV_DIR}/bin/python" -m pip install --upgrade --force-reinstall pip setuptools wheel
+sudo -u "${APP_USER}" "${VENV_DIR}/bin/python" -m pip install -r "${REQ_FILE}"
+sudo -u "${APP_USER}" "${VENV_DIR}/bin/python" -m pip install RPi.GPIO
 
 echo "[6/7] Writing systemd service (${SERVICE_FILE})..."
 cat > "${SERVICE_FILE}" <<EOF
