@@ -7,3 +7,5 @@
 - Added project documentation for install, runtime config, and troubleshooting.
 - Added service template defaults aligned with installer behavior.
 - Added package and repository version markers.
+- Removed duplicate binary PDF copies from `documentation/` in favor of searchable text extracts.
+- Added `AGENTS.md` with maintenance and release workflow guidance.

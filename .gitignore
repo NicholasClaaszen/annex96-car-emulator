@@ -27,3 +27,6 @@ Thumbs.db
 # Generated
 *.tmp
 *.bak
+
+# Local docs exports
+documentation/*.pdf

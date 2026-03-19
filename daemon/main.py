@@ -7,6 +7,7 @@ import logging
 import os
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional, Set
 
 import aiohttp
@@ -157,6 +158,8 @@ class WebServer:
     def __init__(self, state: StateStore, serial: SerialManager) -> None:
         self._state = state
         self._serial = serial
+        self._web_dir = Path("web")
+        self._vendor_dir = self._web_dir / "vendor"
         self._app = web.Application()
         self._app.add_routes([
             web.get("/", self._handle_index),
@@ -164,20 +167,37 @@ class WebServer:
             web.get("/health", self._handle_health),
             web.get("/app.js", self._handle_app_js),
             web.get("/styles.css", self._handle_styles_css),
+            web.get("/vendor/{filename}", self._handle_vendor_js),
         ])
         self._websockets: Set[web.WebSocketResponse] = set()
 
     async def _handle_index(self, _request: web.Request) -> web.Response:
-        with open(os.path.join("web", "index.html"), "r", encoding="utf-8") as f:
+        with open(self._web_dir / "index.html", "r", encoding="utf-8") as f:
             return web.Response(text=f.read(), content_type="text/html")
 
     async def _handle_app_js(self, _request: web.Request) -> web.Response:
-        with open(os.path.join("web", "app.js"), "r", encoding="utf-8") as f:
+        with open(self._web_dir / "app.js", "r", encoding="utf-8") as f:
             return web.Response(text=f.read(), content_type="application/javascript")
 
     async def _handle_styles_css(self, _request: web.Request) -> web.Response:
-        with open(os.path.join("web", "styles.css"), "r", encoding="utf-8") as f:
+        with open(self._web_dir / "styles.css", "r", encoding="utf-8") as f:
             return web.Response(text=f.read(), content_type="text/css")
+
+    async def _handle_vendor_js(self, request: web.Request) -> web.Response:
+        filename = request.match_info.get("filename", "")
+        # Restrict this endpoint to known local vendor assets.
+        allowed = {
+            "chart.umd.min.js",
+            "luxon.min.js",
+            "chartjs-adapter-luxon.umd.min.js",
+        }
+        if filename not in allowed:
+            raise web.HTTPNotFound()
+
+        asset_path = self._vendor_dir / filename
+        if not asset_path.exists():
+            raise web.HTTPNotFound()
+        return web.FileResponse(path=asset_path)
 
     async def _handle_health(self, _request: web.Request) -> web.Response:
         return web.json_response({"ok": True, "ts": time.time()})
@@ -263,12 +283,14 @@ async def poll_task(serial: SerialManager, enable_getstate_set: bool) -> None:
 
 async def watchdog_keepalive(serial: SerialManager, interval: float = 2.5) -> None:
     while True:
+        # Keep the controller watchdog from forcing CP back to state A.
         await serial.send_command("wdt", "reset")
         await asyncio.sleep(interval)
 
 
 async def configure_controller(serial: SerialManager, report_cmd: str) -> None:
     logging.info("Configuring controller report/watchdog settings")
+    # `report_cmd` is configurable for firmware variants that renamed this command.
     await serial.send_command(report_cmd, "enable")
     await serial.send_command("report_pwm_changes", "enable")
     await serial.send_command("watchdog", "enable")

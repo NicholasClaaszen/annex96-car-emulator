@@ -23,6 +23,7 @@ let pwmChart;
 let ampsChart;
 let kwChart;
 const themeToggle = document.getElementById('themeToggle');
+// Keep chart payload bounded for low-power Pi browsers.
 const CHART_WINDOW_MS = 10 * 60 * 1000;
 const MAX_CHART_POINTS = 2000;
 
@@ -98,6 +99,7 @@ function connect() {
 
   ws.onclose = () => {
     setStatus('Disconnected - retrying', false);
+    // Simple fixed-delay reconnect keeps behavior predictable in local LAN use.
     reconnectTimer = setTimeout(connect, 1500);
   };
 }
@@ -165,6 +167,7 @@ function ensureCharts() {
 function renderCharts(series) {
   ensureCharts();
   const nowMs = Date.now();
+  // Drop points outside the visible window to avoid unbounded in-browser growth.
   const windowStartMs = nowMs - CHART_WINDOW_MS;
   const data = series
     .slice(-MAX_CHART_POINTS)

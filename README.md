@@ -12,6 +12,7 @@ Current version: `1.0.0`
   - BCM18: MCU reset pulse
 - Starts a web UI (default `http://<pi-ip>:8081`) with live telemetry over WebSocket.
 - Runs as a `systemd` service for auto-start and restart on failures.
+- Serves chart dependencies locally from `web/vendor` (no CDN dependency at runtime).
 
 ## Installer Script
 
@@ -125,8 +126,11 @@ python -m daemon.main
 
 - `daemon/`: async emulator daemon (serial, GPIO, web server, state)
 - `web/`: static frontend (`index.html`, `app.js`, `styles.css`)
+- `web/vendor/`: vendored browser dependencies (`Chart.js`, `Luxon`, adapter)
 - `scripts/install_pi.sh`: Pi installer script
 - `scripts/annex96-ev-emulator.service`: example service template
+- `documentation/*.pdf.txt`: searchable extracted hardware/API references
 - `requirements.txt`: Python dependencies
 - `VERSION`: release version marker
 - `CHANGELOG.md`: release notes
+- `AGENTS.md`: maintenance guidance for coding agents
